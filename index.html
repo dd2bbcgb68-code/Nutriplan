@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#11151b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="NutriPlan">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <title>NutriPlan</title>
+  <style>
+    :root{color-scheme:dark;--bg:#11151b;--panel:#1d242d;--panel2:#252e39;--line:#374250;--text:#f3f6f8;--muted:#aab5c2;--green:#b5ed65;--greenText:#17220c;--red:#ff8b8b}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:env(safe-area-inset-top) 16px calc(22px + env(safe-area-inset-bottom));}
+    main{max-width:760px;margin:auto}.top{display:flex;align-items:center;justify-content:space-between;padding:18px 0 12px}.brand{font-size:25px;font-weight:800;letter-spacing:-.7px}.brand span{color:var(--green)}.muted{color:var(--muted)}.small{font-size:12px}
+    .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:15px;margin:12px 0}
+    .summary{display:grid;grid-template-columns:1fr 1fr;gap:12px}.metric{background:var(--panel2);border-radius:12px;padding:12px}.metric b{display:block;font-size:22px;margin-top:4px}
+    .bar{height:9px;background:#3a4552;border-radius:20px;overflow:hidden;margin-top:10px}.bar>i{display:block;height:100%;background:var(--green);width:0}
+    nav{display:flex;gap:8px;overflow:auto;padding:8px 0 12px}button,.btn{border:0;border-radius:11px;padding:11px 13px;background:var(--panel2);color:var(--text);font:inherit;cursor:pointer}button.active,.primary{background:var(--green);color:var(--greenText);font-weight:750}.danger{color:var(--red)}button:disabled{opacity:.45}
+    .row{display:flex;justify-content:space-between;align-items:center;gap:10px}.meal{border-top:1px solid var(--line);padding:12px 0}.meal:first-child{border-top:0}.meal p{margin:5px 0;color:var(--muted);font-size:13px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.field{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}input,select,textarea{width:100%;border:1px solid var(--line);border-radius:10px;background:#121820;color:var(--text);padding:11px;font:inherit}textarea{min-height:76px;resize:vertical}
+    .recipe{background:var(--panel2);border:1px solid var(--line);border-radius:13px;padding:12px;margin:9px 0}.recipe h3{font-size:16px;margin:0 0 5px}.tag{font-size:12px;color:var(--green)}.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.actions button{font-size:13px;padding:8px 10px}
+    h2{font-size:18px;margin:4px 0 12px}.notice{font-size:12px;color:var(--muted);line-height:1.5}.hidden{display:none!important}.empty{padding:20px;text-align:center;color:var(--muted)}
+    @media(min-width:600px){.recipe-list{display:grid;grid-template-columns:1fr 1fr;gap:10px}.recipe{margin:0}}
+  </style>
+</head>
+<body>
+<main>
+  <header class="top"><div><div class="brand">Nutri<span>Plan</span></div><div class="muted small">Dein persönlicher Ernährungsplan</div></div><div aria-hidden="true" style="font-size:28px">🥗</div></header>
+  <section class="panel">
+    <div class="row"><strong>Dein Tagesziel</strong><span class="tag">Max. 1.900 kcal</span></div>
+    <div class="summary" style="margin-top:12px">
+      <div class="metric"><span class="muted small">Kalorien</span><b id="totalKcal">0 <small style="font-size:12px">kcal</small></b><div class="bar"><i id="calBar"></i></div><span class="small muted" id="remaining">1.900 kcal übrig</span></div>
+      <div class="metric"><span class="muted small">Protein</span><b id="totalProtein">0 g</b><span class="small muted">Tagesübersicht</span></div>
+    </div>
+    <p class="notice">Das Kalorienlimit ist deine persönliche Vorgabe und keine medizinische oder ernährungswissenschaftliche Bewertung deines Bedarfs.</p>
+  </section>
+  <nav aria-label="Navigation">
+    <button class="active" data-view="day">Mein Tag</button><button data-view="recipes">Rezepte</button><button data-view="add">Eigenes Rezept</button>
+  </nav>
+  <section id="view-day">
+    <div class="row"><h2>Deine Mahlzeiten</h2><button id="clearDay" class="danger">Tag leeren</button></div>
+    <div class="panel" id="dayMeals"></div>
+    <p class="notice">Wähle in der Rezeptesammlung „Zum Tag hinzufügen“, um Mahlzeiten einzuplanen. Mehrere Portionen desselben Gerichts sind möglich.</p>
+  </section>
+  <section id="view-recipes" class="hidden">
+    <div class="row"><h2>Rezeptesammlung</h2><span class="small muted" id="recipeCount"></span></div>
+    <div class="grid">
+      <label class="field">Kategorie<select id="filterCat"><option value="Alle">Alle</option><option>Frühstück</option><option>Mittagessen</option><option>Abendessen</option><option>Snack</option></select></label>
+      <label class="field">Ansicht<select id="filterFav"><option value="all">Alle Rezepte</option><option value="fav">Favoriten</option><option value="own">Eigene Rezepte</option></select></label>
+    </div>
+    <div id="recipeList" class="recipe-list" style="margin-top:12px"></div>
+  </section>
+  <section id="view-add" class="hidden">
+    <h2 id="formTitle">Eigenes Rezept hinzufügen</h2>
+    <form id="recipeForm" class="panel">
+      <input type="hidden" id="editId">
+      <label class="field">Name<input id="rName" required maxlength="70" placeholder="z. B. Protein-Porridge"></label><br>
+      <div class="grid">
+        <label class="field">Kategorie<select id="rCat"><option>Frühstück</option><option>Mittagessen</option><option>Abendessen</option><option>Snack</option></select></label>
+        <label class="field">Kalorien pro Portion<input id="rKcal" type="number" min="0" max="3000" required></label>
+        <label class="field">Protein (g)<input id="rProtein" type="number" min="0" max="300" required></label>
+        <label class="field">Kohlenhydrate (g)<input id="rCarbs" type="number" min="0" max="300" required></label>
+        <label class="field">Fett (g)<input id="rFat" type="number" min="0" max="300" required></label>
+      </div><br>
+      <label class="field">Zutaten & Zubereitung<textarea id="rNotes" placeholder="Zutaten und Zubereitung beschreiben …"></textarea></label>
+      <div class="actions"><button class="primary" type="submit">Rezept speichern</button><button type="button" id="cancelEdit">Abbrechen</button></div>
+    </form>
+    <p class="notice">Deine Rezepte und Favoriten werden lokal in diesem Browser auf deinem iPhone gespeichert. Lösche die Browserdaten nicht, wenn du sie behalten möchtest.</p>
+  </section>
+  <footer class="notice" style="padding:18px 2px">NutriPlan · Daten bleiben auf diesem Gerät. Für eine Sicherung kannst du deine Rezepte exportieren.</footer>
+</main>
+<script>
+const KEY='nutriplan-v1';
+const seed=[
+ {id:'s1',name:'Skyr-Bowl mit Beeren',cat:'Frühstück',kcal:380,p:32,c:42,f:8,notes:'Skyr, Beeren, Haferflocken und etwas Nussmus vermengen.'},
+ {id:'s2',name:'Protein-Porridge',cat:'Frühstück',kcal:430,p:35,c:52,f:9,notes:'Haferflocken mit Milch kochen, Proteinpulver einrühren und mit Obst servieren.'},
+ {id:'s3',name:'Rührei mit Vollkorntoast',cat:'Frühstück',kcal:410,p:29,c:34,f:17,notes:'Eier stocken lassen und mit Vollkorntoast und Tomaten servieren.'},
+ {id:'s4',name:'Hähnchen-Reis-Bowl',cat:'Mittagessen',kcal:560,p:48,c:65,f:12,notes:'Hähnchen anbraten. Mit Reis und Gemüse servieren.'},
+ {id:'s5',name:'Puten-Gemüse-Pfanne',cat:'Mittagessen',kcal:490,p:46,c:38,f:14,notes:'Putenbrust mit Paprika, Zucchini und Kräutern braten.'},
+ {id:'s6',name:'Thunfisch-Wrap',cat:'Mittagessen',kcal:470,p:39,c:43,f:13,notes:'Thunfisch mit Salat und Joghurtdressing in einen Vollkornwrap geben.'},
+ {id:'s7',name:'Lachs mit Kartoffeln',cat:'Abendessen',kcal:590,p:42,c:48,f:23,notes:'Lachs im Ofen garen und mit Kartoffeln und Gemüse servieren.'},
+ {id:'s8',name:'Chili con Carne',cat:'Abendessen',kcal:520,p:40,c:48,f:16,notes:'Mageres Hackfleisch mit Bohnen, Tomaten und Gewürzen köcheln.'},
+ {id:'s9',name:'Magerquark mit Apfel',cat:'Snack',kcal:220,p:28,c:24,f:2,notes:'Magerquark mit Apfelstücken und Zimt verrühren.'},
+ {id:'s10',name:'Hüttenkäse mit Beeren',cat:'Snack',kcal:190,p:24,c:14,f:4,notes:'Hüttenkäse mit frischen Beeren mischen.'}
+];
+let state={recipes:seed.map(x=>({...x,fav:false,own:false})),day:[]};
+try{const saved=JSON.parse(localStorage.getItem(KEY));if(saved&&Array.isArray(saved.recipes)&&Array.isArray(saved.day))state=saved}catch(e){}
+const $=id=>document.getElementById(id);
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){alert('Speichern nicht möglich. Bitte prüfe den freien Speicherplatz deines Browsers.')}} 
+function recipe(id){return state.recipes.find(r=>r.id===id)}
+function totals(){return state.day.reduce((a,item)=>{let r=recipe(item.id);if(r){a.k+=r.kcal*item.qty;a.p+=r.p*item.qty}return a},{k:0,p:0})}
+function updateDay(){
+ const t=totals();$('totalKcal').innerHTML=`${t.k} <small style="font-size:12px">kcal</small>`;$('totalProtein').textContent=`${t.p} g`;$('calBar').style.width=Math.min(100,t.k/1900*100)+'%';$('remaining').textContent=t.k>1900?`${t.k-1900} kcal über deinem Limit`:`${1900-t.k} kcal übrig`;
+ $('remaining').style.color=t.k>1900?'var(--red)':'var(--muted)';
+ const box=$('dayMeals');box.innerHTML='';
+ if(!state.day.length){box.innerHTML='<div class="empty">Noch keine Mahlzeiten geplant.<br>Füge Rezepte aus deiner Sammlung hinzu.</div>';return}
+ state.day.forEach((item,i)=>{const r=recipe(item.id);if(!r)return;const el=document.createElement('div');el.className='meal';const top=document.createElement('div');top.className='row';const name=document.createElement('strong');name.textContent=r.name;const kcal=document.createElement('span');kcal.className='tag';kcal.textContent=(r.kcal*item.qty)+' kcal';top.append(name,kcal);const p=document.createElement('p');p.textContent=`${r.cat} · ${item.qty} Portion(en) · ${r.p*item.qty} g Protein`;const actions=document.createElement('div');actions.className='actions';[['−',()=>{item.qty--;if(item.qty<=0)state.day.splice(i,1);save();updateDay()}],['+',()=>{item.qty++;save();updateDay()}],['Entfernen',()=>{state.day.splice(i,1);save();updateDay()}]].forEach(([label,fn])=>{const b=document.createElement('button');b.textContent=label;b.onclick=fn;actions.append(b)});el.append(top,p,actions);box.append(el)})
+}
+function renderRecipes(){
+ const cat=$('filterCat').value,mode=$('filterFav').value;const list=$('recipeList');list.innerHTML='';
+ const shown=state.recipes.filter(r=>(cat==='Alle'||r.cat===cat)&&(mode==='all'||(mode==='fav'&&r.fav)||(mode==='own'&&r.own)));
+ $('recipeCount').textContent=`${shown.length} Rezepte`;
+ if(!shown.length){list.innerHTML='<div class="empty">Keine passenden Rezepte gefunden.</div>';return}
+ shown.forEach(r=>{const card=document.createElement('article');card.className='recipe';const h=document.createElement('h3');h.textContent=r.name;const tag=document.createElement('div');tag.className='tag';tag.textContent=`${r.cat}${r.own?' · Eigenes Rezept':''}`;const info=document.createElement('p');info.className='muted small';info.textContent=`${r.kcal} kcal · Protein ${r.p} g · Kohlenhydrate ${r.c} g · Fett ${r.f} g`;const notes=document.createElement('p');notes.className='small';notes.textContent=r.notes||'Keine Notizen';const actions=document.createElement('div');actions.className='actions';
+ const add=document.createElement('button');add.className='primary';add.textContent='Zum Tag hinzufügen';add.onclick=()=>{const t=totals();if(t.k+r.kcal>1900&&!confirm('Damit wird dein Tageslimit von 1.900 kcal überschritten. Trotzdem hinzufügen?'))return;const existing=state.day.find(x=>x.id===r.id);if(existing)existing.qty++;else state.day.push({id:r.id,qty:1});save();updateDay();showView('day')};
+ const fav=document.createElement('button');fav.textContent=r.fav?'♥ Favorit':'♡ Favorit';fav.onclick=()=>{r.fav=!r.fav;save();renderRecipes()};
+ actions.append(add,fav);
+ if(r.own){const edit=document.createElement('button');edit.textContent='Bearbeiten';edit.onclick=()=>editRecipe(r.id);const del=document.createElement('button');del.className='danger';del.textContent='Löschen';del.onclick=()=>{if(confirm('Dieses eigene Rezept löschen?')){state.day=state.day.filter(x=>x.id!==r.id);state.recipes=state.recipes.filter(x=>x.id!==r.id);save();renderRecipes();updateDay()}};actions.append(edit,del)}
+ card.append(h,tag,info,notes,actions);list.append(card)})
+}
+function showView(view){['day','recipes','add'].forEach(v=>$('view-'+v).classList.toggle('hidden',v!==view));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===view));if(view==='recipes')renderRecipes()}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>showView(b.dataset.view));
+$('filterCat').onchange=renderRecipes;$('filterFav').onchange=renderRecipes;
+function editRecipe(id){const r=recipe(id);if(!r)return;$('editId').value=id;$('rName').value=r.name;$('rCat').value=r.cat;$('rKcal').value=r.kcal;$('rProtein').value=r.p;$('rCarbs').value=r.c;$('rFat').value=r.f;$('rNotes').value=r.notes;$('formTitle').textContent='Rezept bearbeiten';showView('add')}
+$('recipeForm').onsubmit=e=>{e.preventDefault();const id=$('editId').value;const old=id?recipe(id):null;const r={id:id||('u'+Date.now()),name:$('rName').value.trim(),cat:$('rCat').value,kcal:+$('rKcal').value,p:+$('rProtein').value,c:+$('rCarbs').value,f:+$('rFat').value,notes:$('rNotes').value.trim(),fav:old?.fav||false,own:true};if(old)Object.assign(old,r);else state.recipes.unshift(r);save();e.target.reset();$('editId').value='';$('formTitle').textContent='Eigenes Rezept hinzufügen';showView('recipes');renderRecipes()};
+$('cancelEdit').onclick=()=>{$('recipeForm').reset();$('editId').value='';$('formTitle').textContent='Eigenes Rezept hinzufügen';showView('recipes')};
+$('clearDay').onclick=()=>{if(confirm('Alle Mahlzeiten des Tages entfernen?')){state.day=[];save();updateDay()}};
+if('serviceWorker' in navigator && location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
+updateDay();renderRecipes();
+</script>
+</body></html>
